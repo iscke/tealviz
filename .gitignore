@@ -1,0 +1,4 @@
+.dist/*
+!.dist/readme
+node_modules
+package-lock.json
