@@ -1,6 +1,6 @@
 Experimental graphviz visualizer for algorand TEAL code
 
-usage: node dist/main.js | dot | your favourite image viewer
+usage: cat code.teal | node dist/main.js | dot | your favourite image viewer
 
 This is /extremely/ untested, I make no promises to any accuracy of any image
 this may output.

@@ -1,12 +1,3 @@
-import { isBlock, isConstructorDeclaration } from "typescript";
-
-class Opcode {
-    constructor(public op: string) {}
-}
-class Label {
-    constructor(public label: string) {}
-}
-type Statement = Label | Opcode;
 /**
  * blocks can be entered in one of two ways
  * - label above it
@@ -38,13 +29,6 @@ function getBranchMaybe(line: string) {
     return null;
 }
 
-function getLabelFor(input: string[], label: string): number {
-    const idx = input.findIndex(line => line.startsWith(label));
-    if (idx === -1) throw new Error(`label not found: '${label}'`);
-    return idx;
-}
-
-
 function extractBlocks(input: string[]) {
     type ConstructingBlock = {
         body: string[],
@@ -59,7 +43,7 @@ function extractBlocks(input: string[]) {
     const labels: {[k: string]: ConstructingBlock} = {};
 
     let curBlock: ConstructingBlock = {body: [], dead: false};
-    for (const [index, line] of Object.entries(input)) {
+    for (const line of input) {
         // labels are flown into from the previous block
         // labels exist at the start of a new block
         const label = getLabelMaybe(line);
@@ -88,7 +72,6 @@ function extractBlocks(input: string[]) {
 
         // terminators (err, return) end the block, anything after them is dead code
         if (isTerminator(line)) {
-            console.error(`TERMINATOR: ${JSON.stringify(curBlock)}`)
             blocks.push(curBlock);
             curBlock = {body: [], dead: true};
             continue;
@@ -129,150 +112,12 @@ function vizBlocks(blocks: Block[]) {
     return `digraph program {\n${nodes.join('\n')}\n\n${relations.join('\n')}\n\n}`;
 }
 
-console.log(vizBlocks(extractBlocks(
-`txn OnCompletion
-int NoOp
-==
-bnz l0
-txn OnCompletion
-int OptIn
-==
-bnz l1
-txn OnCompletion
-int CloseOut
-==
-bnz l2
-txn OnCompletion
-int UpdateApplication
-==
-bnz l3
-txn OnCompletion
-int DeleteApplication
-==
-bnz l4
-err
-l0:
-txn ApplicationID
-int 0
-==
-bnz l6
-txna ApplicationArgs 0
-byte "vote"
-==
-bnz l7
-txna ApplicationArgs 0
-byte "distribute"
-==
-bnz l8
-txna ApplicationArgs 0
-byte "startvote"
-==
-bnz l9
-err
-l6:
-byte "phase"
-int 1
-app_global_put
-int 1
-b l10
-l7:
-txn NumAppArgs
-int 2
-==
-int 0
-byte "hasvote"
-app_local_get
-&&
-txna ApplicationArgs 1
-btoi
-int 1
->=
-txna ApplicationArgs 1
-btoi
-int 1
-<=
-&&
-&&
-bnz l11
-int 0
-b l12
-l11:
-int 0
-byte "hasvote"
-int 0
-app_local_put
-byte "VOTE:"
-txna ApplicationArgs 1
-concat
-byte "VOTE:"
-txna ApplicationArgs 1
-concat
-app_global_get
-int 1
-+
-app_global_put
-int 1
-l12:
-b l10
-l8:
-byte "phase"
-app_global_get
-int 1
-!=
-txn Sender
-addr FA5HRSLW556MK5ETGG3FYKY7RV653I477L57J2VQGTVQ2OCDRLT6K4OKTU
-==
-&&
-int 1
-int 0
-app_opted_in
-&&
-bnz l13
-int 0
-b l14
-l13:
-int 1
-byte "hasvote"
-int 1
-app_local_put
-int 1
-l14:
-b l10
-l9:
-byte "phase"
-app_global_get
-int 1
-==
-txn Sender
-addr FA5HRSLW556MK5ETGG3FYKY7RV653I477L57J2VQGTVQ2OCDRLT6K4OKTU
-==
-&&
-bnz l15
-int 0
-b l16
-l15:
-byte "phase"
-int 2
-app_global_put
-int 1
-l16:
-l10:
-b l5
-l1:
-byte "phase"
-app_global_get
-int 1
-==
-b l5
-l2:
-int 1
-b l5
-l3:
-int 0
-b l5
-l4:
-txn Sender
-addr FA5HRSLW556MK5ETGG3FYKY7RV653I477L57J2VQGTVQ2OCDRLT6K4OKTU
-==
-l5:`.split('\n')
-)))
+const lines: string[] = [];
+import * as readline from 'readline';
+const rl = readline.createInterface(process.stdin);
+rl.on('line', line => {
+	lines.push(line);
+}).on('close', () => {
+	console.log(vizBlocks(extractBlocks(lines)));
+	process.exit(0);
+});
